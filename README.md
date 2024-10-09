@@ -1,7 +1,3 @@
-# Crear el archivo README.md con el contenido solicitado
-
-readme_content = """
-
 # GMF Transmission Response
 
 Este proyecto en Go maneja la transmisión de archivos, sus resultados y procesamiento mediante un servicio web basado en
@@ -9,7 +5,7 @@ HTTP. Está diseñado siguiendo principios SOLID y estructurado de manera modula
 escalabilidad.
 
 ## Estructura del Proyecto
-
+![img.png](img.png)
 - **models**: Contiene las definiciones de las estructuras que representan las tablas de la base de datos y las
   entidades de negocio.
 - **repository**: Implementa el acceso a los datos utilizando GORM y expone interfaces para simular o cambiar la base de
@@ -23,9 +19,9 @@ escalabilidad.
 
 ## Requisitos
 
-- Go 1.19 o superior.
+- Go 1.20 o superior.
 - GORM para manejo de base de datos.
-- SQLite como base de datos para pruebas locales.
+- Postgres para almacenar los registros de transmisión.
 - Testify para las pruebas unitarias.
 
 ## Instalación
