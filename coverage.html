@@ -1,0 +1,526 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>handler: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">gmf_transmission_response/internal/handler/archive_handler.go (100.0%)</option>
+				
+				<option value="file1">gmf_transmission_response/internal/logs/logger.go (100.0%)</option>
+				
+				<option value="file2">gmf_transmission_response/internal/models/archivo.go (100.0%)</option>
+				
+				<option value="file3">gmf_transmission_response/internal/repository/archivo_repository.go (100.0%)</option>
+				
+				<option value="file4">gmf_transmission_response/internal/routes/routes.go (100.0%)</option>
+				
+				<option value="file5">gmf_transmission_response/internal/service/archivo_service.go (97.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package handler
+
+import (
+        "encoding/json"
+        "fmt"
+        "gmf_transmission_response/internal/logs"
+        "gmf_transmission_response/internal/models"
+        "gmf_transmission_response/internal/service"
+        "net/http"
+)
+
+// ArchivoHandlerInterface define la interfaz para manejar transmisiones
+type ArchivoHandlerInterface interface {
+        HandleTransmisionResponses(w http.ResponseWriter, r *http.Request)
+}
+
+// ArchivoHandler maneja las solicitudes relacionadas con archivos.
+type ArchivoHandler struct {
+        ArchivoService service.ArchivoServiceInterface
+}
+
+// NewArchivoHandler crea una nueva instancia de ArchivoHandler.
+func NewArchivoHandler(archivoService service.ArchivoServiceInterface) *ArchivoHandler <span class="cov8" title="1">{ // Cambia esto a la interfaz
+        return &amp;ArchivoHandler{
+                ArchivoService: archivoService,
+        }
+}</span>
+
+// HandleTransmisionResponses es el controlador para procesar el array de respuestas de transmisión.
+// Recibe un array de transmisiones a través de API Gateway y procesa cada una de ellas.
+func (h *ArchivoHandler) HandleTransmisionResponses(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        var transmisionResponse models.TransmisionResponse
+
+        // Decodificar el cuerpo de la solicitud JSON en la estructura de TransmisionResponse
+        if err := json.NewDecoder(r.Body).Decode(&amp;transmisionResponse); err != nil </span><span class="cov8" title="1">{
+                logs.LogError(nil, "Error al decodificar el cuerpo de la solicitud: %v", err)
+                http.Error(w, "Solicitud inválida", http.StatusBadRequest)
+                return
+        }</span>
+
+        // Inicializar contadores
+        <span class="cov8" title="1">var errorCount, successCount int
+
+        // Procesar cada archivo transmitido en la solicitud
+        for _, transmittedFile := range transmisionResponse.TransmittedFiles </span><span class="cov8" title="1">{
+                // Procesar cada archivo utilizando el servicio
+                if err := h.ArchivoService.ProcesarTransmision(transmittedFile); err != nil </span><span class="cov8" title="1">{
+                        // Si hay un error, registrar el error y continuar con el siguiente archivo
+                        logs.LogError(nil, "Error al procesar archivo transmitido: %v", err)
+                        errorCount++ // Incrementar el contador de errores
+                        continue</span>     // Continuar con el siguiente archivo
+                }
+                <span class="cov8" title="1">successCount++</span> // Incrementar el contador de archivos procesados exitosamente
+        }
+
+        // Loggear el resultado del procesamiento
+        <span class="cov8" title="1">logs.LogInfo(nil, "Archivos procesados correctamente: %d ✅", successCount)
+        logs.LogWarn(nil, "Archivos con errores: %d ❌", errorCount)
+
+        // Crear una respuesta en formato JSON con el resumen
+        response := models.Response{
+                TotalFiles: len(transmisionResponse.TransmittedFiles),
+                ErrorCount: errorCount,
+                Success:    errorCount == 0,
+        }
+
+        if errorCount &gt; 0 </span><span class="cov8" title="1">{
+                response.Message = fmt.Sprintf(
+                        "Se procesaron con errores %d de %d archivos", errorCount, len(transmisionResponse.TransmittedFiles))
+                w.WriteHeader(http.StatusPartialContent)
+        }</span> else<span class="cov8" title="1"> {
+                response.Message = "Todos los archivos fueron procesados correctamente ✅"
+                w.WriteHeader(http.StatusOK)
+        }</span>
+
+        // Enviar la respuesta JSON
+        <span class="cov8" title="1">json.NewEncoder(w).Encode(response)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package logs
+
+import (
+        "context"
+        "github.com/sirupsen/logrus"
+        "os"
+)
+
+var Log = InitLogger()
+
+// InitLogger inicializa el logger de logrus.
+func InitLogger() *logrus.Logger <span class="cov8" title="1">{
+        logger := logrus.New()
+        logger.SetFormatter(
+                &amp;logrus.TextFormatter{
+                        FullTimestamp:          true,
+                        DisableLevelTruncation: true,
+                },
+        )
+        logger.SetOutput(os.Stdout)
+        logger.SetLevel(logrus.InfoLevel)
+        return logger
+}</span>
+
+// LogError permite recibir un mensaje con o sin contexto.
+func LogError(ctx interface{}, msg string, args ...interface{}) <span class="cov8" title="1">{
+        switch ctxTyped := ctx.(type) </span>{
+        case context.Context:<span class="cov8" title="1">
+                Log.WithContext(ctxTyped).Errorf(msg, args...)</span>
+        default:<span class="cov8" title="1">
+                Log.Errorf(msg, args...)</span>
+        }
+}
+
+func LogInfo(ctx context.Context, msg string, args ...interface{}) <span class="cov8" title="1">{
+        Log.WithContext(ctx).Infof(msg, args...)
+}</span>
+
+func LogWarn(ctx context.Context, msg string, args ...interface{}) <span class="cov8" title="1">{
+        Log.WithContext(ctx).Warnf(msg, args...)
+}</span>
+
+// Logs de conexión a la base de datos
+func LogConexionBaseDatosEstablecida() <span class="cov8" title="1">{
+        LogInfo(context.Background(), "Conexión a la base de datos establecida correctamente 🐘")
+}</span>
+
+func LogErrorConexionBaseDatos(err error) <span class="cov8" title="1">{
+        LogError(context.Background(), "Error al establecer la conexión a la base de datos: %v", err)
+}</span>
+
+func LogErrorCerrandoConexionBaseDatos(err error) <span class="cov8" title="1">{
+        LogError(context.Background(), "Error al cerrar la conexión a la base de datos: %v", err)
+}</span>
+
+func LogConexionBaseDatosCerrada() <span class="cov8" title="1">{
+        LogInfo(context.Background(), "Conexión a la base de datos cerrada correctamente 🚪")
+}</span>
+
+// Logs de migración de tablas
+func LogMigracionTablaCompletada(tabla string) <span class="cov8" title="1">{
+        LogInfo(context.Background(), "Migración de la tabla %s completada correctamente 🐘", tabla)
+}</span>
+
+func LogErrorMigrandoTabla(tabla string, err error) <span class="cov8" title="1">{
+        LogError(context.Background(), "Error al migrar la tabla %s: %v", tabla, err)
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package models
+
+import "time"
+
+// CGDArchivo representa la estructura de la tabla CGD_ARCHIVO.
+type CGDArchivo struct {
+        IDArchivo                   int64     `json:"id_archivo" gorm:"type:numeric(16);primaryKey"`
+        NombreArchivo               string    `json:"nombre_archivo" gorm:"type:varchar(100);not null"`
+        PlataformaOrigen            string    `json:"plataforma_origen" gorm:"type:char(2);not null"`
+        TipoArchivo                 string    `json:"tipo_archivo" gorm:"type:char(2);not null"`
+        ConsecutivoPlataformaOrigen int16     `json:"consecutivo_plataforma_origen" gorm:"type:smallint;not null"`
+        FechaNombreArchivo          string    `json:"fecha_nombre_archivo" gorm:"type:char(8);not null"`
+        FechaRegistroResumen        string    `json:"fecha_registro_resumen" gorm:"type:char(14)"`
+        NroTotalRegistros           int64     `json:"nro_total_registros" gorm:"type:numeric(9)"`
+        NroRegistrosError           int64     `json:"nro_registros_error" gorm:"type:numeric(9)"`
+        NroRegistrosValidos         int64     `json:"nro_registros_validos" gorm:"type:numeric(9)"`
+        Estado                      string    `json:"estado" gorm:"type:varchar(50);not null"`
+        FechaRecepcion              time.Time `json:"fecha_recepcion" gorm:"type:timestamp;not null"`
+        FechaCiclo                  time.Time `json:"fecha_ciclo" gorm:"type:date;not null"`
+        ContadorIntentosCargue      int16     `json:"contador_intentos_cargue" gorm:"type:smallint;not null"`
+        ContadorIntentosGeneracion  int16     `json:"contador_intentos_generacion" gorm:"type:smallint;not null"`
+        ContadorIntentosEmpaquetado int16     `json:"contador_intentos_empaquetado" gorm:"type:smallint;not null"`
+        ACGFechaGeneracion          time.Time `json:"acg_fecha_generacion" gorm:"type:timestamp"`
+        ACGConsecutivo              int64     `json:"acg_consecutivo" gorm:"type:numeric(4)"`
+        ACGNombreArchivo            string    `json:"acg_nombre_archivo" gorm:"type:varchar(100)"`
+        ACGRegistroEncabezado       string    `json:"acg_registro_encabezado" gorm:"type:varchar(200)"`
+        ACGRegistroResumen          string    `json:"acg_registro_resumen" gorm:"type:varchar(200)"`
+        ACGTotalTx                  int64     `json:"acg_total_tx" gorm:"type:numeric(9)"`
+        ACGMontoTotalTx             float64   `json:"acg_monto_total_tx" gorm:"type:decimal(19,2)"`
+        ACGTotalTxDebito            int64     `json:"acg_total_tx_debito" gorm:"type:numeric(9)"`
+        ACGMontoTotalTxDebito       float64   `json:"acg_monto_total_tx_debito" gorm:"type:decimal(19,2)"`
+        ACGTotalTxReverso           int64     `json:"acg_total_tx_reverso" gorm:"type:numeric(9)"`
+        ACGMontoTotalTxReverso      float64   `json:"acg_monto_total_tx_reverso" gorm:"type:decimal(19,2)"`
+        ACGTotalTxReintegro         int64     `json:"acg_total_tx_reintegro" gorm:"type:numeric(9)"`
+        ACGMontoTotalTxReintegro    float64   `json:"acg_monto_total_tx_reintegro" gorm:"type:decimal(19,2)"`
+        AnulacionNombreArchivo      string    `json:"anulacion_nombre_archivo" gorm:"type:varchar(100)"`
+        AnulacionJustificacion      string    `json:"anulacion_justificacion" gorm:"type:varchar(4000)"`
+        AnulacionFechaAnulacion     time.Time `json:"anulacion_fecha_anulacion" gorm:"type:timestamp"`
+        GAWRtaTransEstado           string    `json:"gaw_rta_trans_estado" gorm:"type:varchar(50)"`
+        GAWRtaTransCodigo           string    `json:"gaw_rta_trans_codigo" gorm:"type:varchar(4)"`
+        GAWRtaTransDetalle          string    `json:"gaw_rta_trans_detalle" gorm:"type:varchar(1000)"`
+        IDConsolidado               int64     `json:"id_consolidado" gorm:"type:numeric(14);foreignkey:IDConsolidado"`
+        CodigoError                 string    `json:"codigo_error" gorm:"type:varchar(30);foreignkey:CodigoError"`
+        DetalleError                string    `json:"detalle_error" gorm:"type:varchar(2000)"`
+}
+
+// TableName devuelve el nombre de la tabla para el modelo CGDArchivo.
+func (CGDArchivo) TableName() string <span class="cov8" title="1">{
+        return "CGD_ARCHIVO"
+}</span>
+
+// CGDArchivoEstado representa la estructura de la tabla CGD_ARCHIVO_ESTADO.
+type CGDArchivoEstado struct {
+        IDArchivo         int64     `json:"id_archivo" gorm:"type:numeric(16);primaryKey;foreignKey:IDArchivo"`
+        EstadoInicial     string    `json:"estado_inicial" gorm:"type:varchar(50)"`
+        EstadoFinal       string    `json:"estado_final" gorm:"type:varchar(50);primaryKey"`
+        FechaCambioEstado time.Time `json:"fecha_cambio_estado" gorm:"type:timestamp;primaryKey;not null;autoCreateTime(6)"`
+}
+
+// TableName devuelve el nombre de la tabla para el modelo CGDArchivoEstado.
+func (CGDArchivoEstado) TableName() string <span class="cov8" title="1">{
+        return "CGD_ARCHIVO_ESTADO"
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package repository
+
+import (
+        "gmf_transmission_response/internal/models"
+        "gorm.io/gorm"
+)
+
+// RepositoryInterface methods de la interfaz GormArchivoRepository
+type RepositoryInterface interface {
+        GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivo, error)
+        UpdateArchivo(archivo *models.CGDArchivo) error
+        InsertEstadoArchivo(estado *models.CGDArchivoEstado) error
+}
+
+// GormArchivoRepository implementa el repositorio de Archivo utilizando GORM.
+type GormArchivoRepository struct {
+        DB *gorm.DB
+}
+
+// NewArchivoRepository crea una nueva instancia de GormArchivoRepository
+func NewArchivoRepository(db *gorm.DB) *GormArchivoRepository <span class="cov8" title="1">{
+        return &amp;GormArchivoRepository{
+                DB: db,
+        }
+}</span>
+
+// GetArchivoByNombreArchivo obtiene un archivo por su nombre de archivo (ACGNombreArchivo).
+func (r *GormArchivoRepository) GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivo, error) <span class="cov8" title="1">{
+        var archivo models.CGDArchivo
+        if err := r.DB.Where(
+                "acg_nombre_archivo = ?", nombreArchivo).First(&amp;archivo).Error; err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return &amp;archivo, nil</span>
+}
+
+// UpdateArchivo actualiza el archivo en la base de datos con el nuevo estado de la transmisión.
+func (r *GormArchivoRepository) UpdateArchivo(archivo *models.CGDArchivo) error <span class="cov8" title="1">{
+        return r.DB.Model(&amp;archivo).Updates(map[string]interface{}{
+                "gaw_rta_trans_estado":  archivo.GAWRtaTransEstado,
+                "gaw_rta_trans_codigo":  archivo.GAWRtaTransCodigo,
+                "gaw_rta_trans_detalle": archivo.GAWRtaTransDetalle,
+                "estado":                archivo.Estado,
+        }).Error
+}</span>
+
+// InsertEstadoArchivo inserta un nuevo estado en la tabla CGD_ARCHIVO_ESTADO.
+func (r *GormArchivoRepository) InsertEstadoArchivo(estado *models.CGDArchivoEstado) error <span class="cov8" title="1">{
+        return r.DB.Create(estado).Error
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package routes
+
+import (
+        "gmf_transmission_response/internal/handler"
+        "net/http"
+)
+
+func SetupRoutes(archivoHandle handler.ArchivoHandlerInterface) <span class="cov8" title="1">{
+        http.HandleFunc("/transmission", func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                archivoHandle.HandleTransmisionResponses(w, r)
+        }</span>)
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package service
+
+import (
+        "fmt"
+        "gmf_transmission_response/internal/logs"
+        "gmf_transmission_response/internal/models"
+        "gmf_transmission_response/internal/repository"
+        "path/filepath"
+        "strconv"
+        "strings"
+        "time"
+)
+
+// ArchivoServiceInterface define los métodos que el servicio de archivos debe implementar.
+type ArchivoServiceInterface interface {
+        ProcesarTransmision(transmittedFile models.TransmittedFile) error
+        RemoveExtension(fileName string) string
+        IsAnulacion(fileName string) bool
+        ValidateIDLength(id string) error
+}
+
+// ArchivoService implementa el servicio de archivos.
+type ArchivoService struct {
+        repo repository.RepositoryInterface
+}
+
+// NewArchivoService crea una nueva instancia de ArchivoService.
+func NewArchivoService(repo repository.RepositoryInterface) *ArchivoService <span class="cov8" title="1">{
+        return &amp;ArchivoService{
+                repo: repo,
+        }
+}</span>
+
+// ProcesarTransmision procesa una respuesta de transmisión (movimiento o anulación).
+func (s *ArchivoService) ProcesarTransmision(transmittedFile models.TransmittedFile) error <span class="cov8" title="1">{
+        // Eliminar la extensión del nombre del archivo
+        fileNameWithoutExtension := s.RemoveExtension(transmittedFile.FileName)
+        // Validar si la respuesta es una anulación basándose en el nombre del archivo.
+        isAnulacion := s.IsAnulacion(fileNameWithoutExtension)
+        if isAnulacion </span><span class="cov8" title="1">{
+                logs.LogInfo(nil, "La transmisión es una anulación 🅰️ para el archivo: %s", transmittedFile.FileName)
+        }</span> else<span class="cov8" title="1"> {
+                logs.LogInfo(nil, "La transmisión es un movimiento Ⓜ️ para el archivo: %s", transmittedFile.FileName)
+        }</span>
+
+        // Buscar el archivo en la base de datos por el nombre del archivo (ACGNombreArchivo)
+        <span class="cov8" title="1">archivo, err := s.repo.GetArchivoByNombreArchivo(fileNameWithoutExtension)
+        if err != nil </span><span class="cov8" title="1">{
+                logs.LogError(nil, "Error al obtener el archivo desde la base de datos: %v", err)
+                return err
+        }</span>
+
+        // Validar la longitud del ID del archivo
+        <span class="cov8" title="1">if err := s.ValidateIDLength(strconv.FormatInt(archivo.IDArchivo, 10)); err != nil </span><span class="cov8" title="1">{
+                logs.LogError(nil, "Error en la longitud del ID del archivo: %v", err)
+        }</span>
+
+        // Actualizar el estado del archivo en función de la transmisión
+        <span class="cov8" title="1">if err := s.actualizarEstadoArchivo(archivo, transmittedFile, isAnulacion); err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        // Insertar un nuevo estado en la tabla CGD_ARCHIVO_ESTADO
+        <span class="cov8" title="1">estadoArchivo := &amp;models.CGDArchivoEstado{
+                IDArchivo:         archivo.IDArchivo,
+                EstadoInicial:     archivo.GAWRtaTransEstado,
+                EstadoFinal:       transmittedFile.TransmissionResult.Status,
+                FechaCambioEstado: time.Now(),
+        }
+        if err := s.repo.InsertEstadoArchivo(estadoArchivo); err != nil </span><span class="cov8" title="1">{
+                logs.LogError(
+                        nil, "Error al insertar el estado del archivo en la tabla CGD_ARCHIVO_ESTADO: %v", err)
+                return err
+        }</span>
+        <span class="cov8" title="1">logs.LogInfo(
+                nil, "Se ha insertado un nuevo estado para el archivo {ID: %d} en la tabla CGD_ARCHIVO_ESTADO. 📝",
+                archivo.IDArchivo)
+        return nil</span>
+}
+
+// actualizarEstadoArchivo actualiza el estado del archivo dependiendo si es anulación o movimiento.
+func (s *ArchivoService) actualizarEstadoArchivo(
+        archivo *models.CGDArchivo, transmittedFile models.TransmittedFile, isAnulacion bool) error <span class="cov8" title="1">{
+        // Actualizar el estado en función del resultado de la transmisión
+        archivo.GAWRtaTransEstado = transmittedFile.TransmissionResult.Status
+        archivo.GAWRtaTransCodigo = transmittedFile.TransmissionResult.Code
+        archivo.GAWRtaTransDetalle = transmittedFile.TransmissionResult.Detail
+
+        if transmittedFile.TransmissionResult.Status == "ERROR" </span><span class="cov8" title="1">{
+                if isAnulacion </span><span class="cov8" title="1">{
+                        archivo.Estado = "ANULACION_FALLIDA"
+                        logs.LogInfo(nil, "Se ha marcado el archivo en estado ANULACION_FALLIDA.")
+                }</span> else<span class="cov8" title="1"> {
+                        archivo.Estado = "ENVIO_FALLIDO"
+                        logs.LogInfo(nil, "Se ha marcado el archivo en estado ENVIO_FALLIDO.")
+                }</span>
+        } else<span class="cov8" title="1"> {
+                // Si la transmisión fue exitosa
+                if isAnulacion </span><span class="cov8" title="1">{
+                        archivo.Estado = "ANULACION_ENVIADA"
+                        logs.LogInfo(nil, "Se ha marcado el archivo en estado ANULACION_ENVIADA.")
+                }</span> else<span class="cov8" title="1"> {
+                        archivo.Estado = "ENVIADO"
+                        logs.LogInfo(nil, "Se ha marcado el archivo en estado ENVIADO.")
+                }</span>
+        }
+
+        // Actualizar el archivo en la base de datos
+        <span class="cov8" title="1">if err := s.repo.UpdateArchivo(archivo); err != nil </span><span class="cov8" title="1">{
+                logs.LogError(nil, "Error al actualizar el archivo en la base de datos: %v", err)
+                return err
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// removeExtension elimina la extensión de un nombre de archivo.
+func (s *ArchivoService) RemoveExtension(fileName string) string <span class="cov8" title="1">{
+        return strings.TrimSuffix(fileName, filepath.Ext(fileName))
+}</span>
+
+// isAnulacion valida si el archivo es de tipo "anulación" verificando si tiene "-A" en el nombre.
+func (s *ArchivoService) IsAnulacion(fileName string) bool <span class="cov8" title="1">{
+        return strings.HasSuffix(fileName, "-A")
+}</span>
+
+// validateIDLength valida que el ID del archivo tenga una longitud de 16 caracteres.
+func (s *ArchivoService) ValidateIDLength(id string) error <span class="cov8" title="1">{
+        if len(id) != 16 </span><span class="cov8" title="1">{
+                return fmt.Errorf("el ID del archivo debe tener una longitud de 16 caracteres")
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
