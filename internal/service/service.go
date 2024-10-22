@@ -32,50 +32,38 @@ func NewArchivoService(repo repository.RepositoryInterface) *ArchivoService {
 
 // ProcesarTransmision procesa una respuesta de transmisión (movimiento o anulación).
 func (s *ArchivoService) ProcesarTransmision(transmittedFile models.TransmittedFile) error {
-	// Eliminar la extensión del nombre del archivo
-	fileNameWithoutExtension := s.RemoveExtension(transmittedFile.FileName)
-	// Validar si la respuesta es una anulación basándose en el nombre del archivo.
-	isAnulacion := s.IsAnulacion(fileNameWithoutExtension)
+	fileName := transmittedFile.FileName
+	isAnulacion := s.IsAnulacion(s.RemoveExtension(fileName))
+
 	if isAnulacion {
-		logs.LogInfo(
-			nil, "La transmisión es una anulación 🅰️ para el archivo: %s", transmittedFile.FileName)
+		logs.Logger.LogInfo("La transmisión es una anulación", fileName)
 	} else {
-		logs.LogInfo(
-			nil, "La transmisión es un movimiento Ⓜ️ para el archivo: %s", transmittedFile.FileName)
+		logs.Logger.LogInfo("La transmisión es un movimiento", fileName)
 	}
 
-	// Buscar el archivo en la base de datos por el nombre del archivo (ACGNombreArchivo)
-	archivo, err := s.repo.GetArchivoByNombreArchivo(fileNameWithoutExtension)
+	archivo, err := s.repo.GetArchivoByNombreArchivo(fileName)
 	if err != nil {
-		logs.LogError(nil, "Error al obtener el archivo desde la base de datos: %v", err)
+		logs.Logger.LogError("Error al obtener archivo de la base de datos", err, fileName)
 		return err
 	}
 
-	//// Validar la longitud del ID del archivo
-	//if err := s.ValidateIDLength(strconv.FormatInt(archivo.IDArchivo, 10)); err != nil {
-	//	logs.LogError(nil, "Error en la longitud del ID del archivo: %v", err)
-	//}
-
-	// Actualizar el estado del archivo en función de la transmisión
 	if err := s.actualizarEstadoArchivo(archivo, transmittedFile, isAnulacion); err != nil {
 		return err
 	}
 
-	// Insertar un nuevo estado en la tabla CGD_ARCHIVO_ESTADO
 	estadoArchivo := &models.CGDArchivoEstado{
 		IDArchivo:         archivo.IDArchivo,
 		EstadoInicial:     archivo.GAWRtaTransEstado,
 		EstadoFinal:       transmittedFile.TransmissionResult.Status,
 		FechaCambioEstado: time.Now(),
 	}
+
 	if err := s.repo.InsertEstadoArchivo(estadoArchivo); err != nil {
-		logs.LogError(
-			nil, "Error al insertar el estado del archivo en la tabla CGD_ARCHIVO_ESTADO: %v", err)
+		logs.Logger.LogError("Error al insertar estado del archivo", err, fileName)
 		return err
 	}
-	logs.LogInfo(
-		nil, "Se ha insertado un nuevo estado para el archivo {ID: %d} en la tabla CGD_ARCHIVO_ESTADO. 📝",
-		archivo.IDArchivo)
+
+	logs.Logger.LogInfo("Estado insertado correctamente en la tabla CGD_ARCHIVO_ESTADO", fileName)
 	return nil
 }
 
@@ -87,28 +75,30 @@ func (s *ArchivoService) actualizarEstadoArchivo(
 	archivo.GAWRtaTransCodigo = transmittedFile.TransmissionResult.Code
 	archivo.GAWRtaTransDetalle = transmittedFile.TransmissionResult.Detail
 
+	var filename = archivo.NombreArchivo
+
 	if transmittedFile.TransmissionResult.Status == "ERROR" {
 		if isAnulacion {
 			archivo.Estado = "ANULACION_FALLIDA"
-			logs.LogInfo(nil, "Se ha marcado el archivo en estado ANULACION_FALLIDA.")
+			logs.LogInfo("Se ha marcado el archivo en estado ANULACION_FALLIDA.", filename)
 		} else {
 			archivo.Estado = "ENVIO_FALLIDO"
-			logs.LogInfo(nil, "Se ha marcado el archivo en estado ENVIO_FALLIDO.")
+			logs.LogInfo("Se ha marcado el archivo en estado ENVIO_FALLIDO.", filename)
 		}
 	} else {
 		// Si la transmisión fue exitosa
 		if isAnulacion {
 			archivo.Estado = "ANULACION_ENVIADA"
-			logs.LogInfo(nil, "Se ha marcado el archivo en estado ANULACION_ENVIADA.")
+			logs.LogInfo("Se ha marcado el archivo en estado ANULACION_ENVIADA.", filename)
 		} else {
 			archivo.Estado = "ENVIADO"
-			logs.LogInfo(nil, "Se ha marcado el archivo en estado ENVIADO.")
+			logs.LogInfo("Se ha marcado el archivo en estado ENVIADO.", filename)
 		}
 	}
 
 	// Actualizar el archivo en la base de datos
 	if err := s.repo.UpdateArchivo(archivo); err != nil {
-		logs.LogError(nil, "Error al actualizar el archivo en la base de datos: %v", err)
+		logs.LogError("Error al actualizar el archivo en la base de datos: %v", err, filename)
 		return err
 	}
 

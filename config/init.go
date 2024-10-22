@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"log"
 
 	"gmf_transmission_response/connection"
@@ -10,8 +9,6 @@ import (
 	"gmf_transmission_response/internal/repository"
 	"gmf_transmission_response/internal/service"
 )
-
-var ctx = context.TODO()
 
 // InitApplication inicializa todos los componentes necesarios para la aplicación.
 func InitApplication() (*handler.ArchivoHandler, *connection.DBManager) {
@@ -22,10 +19,11 @@ func InitApplication() (*handler.ArchivoHandler, *connection.DBManager) {
 	// Inicializar el DBManager y abrir la conexión a la base de datos
 	dbManager := connection.NewDBManager()
 	if err := dbManager.InitDB(); err != nil {
+		logs.Logger.LogError("Error inicializando la base de datos", err, "APP_INIT")
 		log.Fatalf("Error inicializando la base de datos: %v", err)
 	}
 
-	// Inicializar el repositorio GORM con la conexión a la base de datos
+	// Inicializar el repositorio con la conexión a la base de datos
 	repo := repository.NewArchivoRepository(dbManager.GetDB())
 
 	// Inicializar el servicio de archivos con el repositorio
@@ -34,14 +32,13 @@ func InitApplication() (*handler.ArchivoHandler, *connection.DBManager) {
 	// Inicializar el handler de archivos
 	archivoHandler := handler.NewArchivoHandler(archivoService)
 
-	logs.LogInfo(ctx, "Aplicación inicializada correctamente 🚀")
+	logs.Logger.LogInfo("Aplicación inicializada correctamente ✅ ", "APP_INIT")
 
 	return archivoHandler, dbManager
 }
 
 // CleanupApplication maneja la limpieza de recursos, como cerrar conexiones a la base de datos.
 func CleanupApplication(dbManager connection.DBManagerInterface) {
-	// Cerrar la conexión a la base de datos
 	dbManager.CloseDB()
-	logs.LogInfo(ctx, "Recursos limpiados correctamente 🧹")
+	logs.Logger.LogInfo("Recursos limpiados correctamente 🧹", "APP_CLEANUP")
 }

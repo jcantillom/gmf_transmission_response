@@ -31,33 +31,28 @@ func NewArchivoHandler(archivoService service.ArchivoServiceInterface) *ArchivoH
 func (h *ArchivoHandler) HandleTransmisionResponses(w http.ResponseWriter, r *http.Request) {
 	var transmisionResponse models.TransmisionResponse
 
-	// Decodificar el cuerpo de la solicitud JSON en la estructura de TransmisionResponse
 	if err := json.NewDecoder(r.Body).Decode(&transmisionResponse); err != nil {
-		logs.LogError(nil, "Error al decodificar el cuerpo de la solicitud: %v", err)
+		logs.Logger.LogError("Error al decodificar el cuerpo de la solicitud", err, "N/A")
 		http.Error(w, "Solicitud inválida", http.StatusBadRequest)
 		return
 	}
 
-	// Inicializar contadores
 	var errorCount, successCount int
 
-	// Procesar cada archivo transmitido en la solicitud
 	for _, transmittedFile := range transmisionResponse.TransmittedFiles {
-		// Procesar cada archivo utilizando el servicio
+		fileName := transmittedFile.FileName
 		if err := h.ArchivoService.ProcesarTransmision(transmittedFile); err != nil {
-			// Si hay un error, registrar el error y continuar con el siguiente archivo
-			logs.LogError(nil, "Error al procesar archivo transmitido: %v", err)
-			errorCount++ // Incrementar el contador de errores
-			continue     // Continuar con el siguiente archivo
+			logs.Logger.LogError("Error al procesar archivo transmitido", err, fileName)
+			errorCount++
+			continue
 		}
-		successCount++ // Incrementar el contador de archivos procesados exitosamente
+		logs.Logger.LogInfo("Archivo procesado exitosamente", fileName)
+		successCount++
 	}
 
-	// Loggear el resultado del procesamiento
-	logs.LogInfo(nil, "Archivos procesados correctamente: %d ✅", successCount)
-	logs.LogWarn(nil, "Archivos con errores: %d ❌", errorCount)
+	logs.Logger.LogInfo(fmt.Sprintf("Archivos procesados correctamente: %d", successCount), "N/A")
+	logs.Logger.LogWarn(fmt.Sprintf("Archivos con errores: %d", errorCount), "N/A")
 
-	// Crear una respuesta en formato JSON con el resumen
 	response := models.Response{
 		TotalFiles: len(transmisionResponse.TransmittedFiles),
 		ErrorCount: errorCount,
@@ -65,14 +60,12 @@ func (h *ArchivoHandler) HandleTransmisionResponses(w http.ResponseWriter, r *ht
 	}
 
 	if errorCount > 0 {
-		response.Message = fmt.Sprintf(
-			"Se procesaron con errores %d de %d archivos", errorCount, len(transmisionResponse.TransmittedFiles))
+		response.Message = fmt.Sprintf("Se procesaron con errores %d de %d archivos", errorCount, len(transmisionResponse.TransmittedFiles))
 		w.WriteHeader(http.StatusPartialContent)
 	} else {
-		response.Message = "Todos los archivos fueron procesados correctamente ✅"
+		response.Message = "Todos los archivos fueron procesados correctamente"
 		w.WriteHeader(http.StatusOK)
 	}
 
-	// Enviar la respuesta JSON
 	json.NewEncoder(w).Encode(response)
 }

@@ -2,14 +2,15 @@ package connection
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"time"
+
 	"gmf_transmission_response/internal/logs"
 	"gmf_transmission_response/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log"
-	"os"
-	"time"
 )
 
 // DBManagerInterface define los métodos que debe implementar un DBManager.
@@ -41,12 +42,12 @@ func (dbm *DBManager) InitDB() error {
 		os.Getenv("DB_NAME"),
 	)
 
-	// Configurar el logs de GORM
+	// Configurar el logger de GORM
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
 			SlowThreshold:             time.Second,
-			LogLevel:                  logger.Warn, // Cambiado a Warn para ver solo logs importantes
+			LogLevel:                  logger.Warn,
 			IgnoreRecordNotFoundError: true,
 			Colorful:                  true,
 		},
@@ -55,24 +56,25 @@ func (dbm *DBManager) InitDB() error {
 	// Abrir la conexión a la base de datos usando GORM
 	var err error
 	dbm.DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: newLogger, // Usar el logs configurado
+		Logger: newLogger,
 	})
 	if err != nil {
-
+		logs.Logger.LogError("Error al abrir la conexión a la base de datos", err, "DB_CONNECTION")
 		return fmt.Errorf("error al abrir la conexión a la base de datos: %w", err)
 	}
 
-	logs.LogConexionBaseDatosEstablecida()
+	logs.Logger.LogInfo("Conexión a la base de datos establecida correctamente 🐘", "DB_CONNECTION")
 
 	// Migrar las tablas
 	if err := dbm.DB.AutoMigrate(
 		&models.CGDArchivo{},
 		&models.CGDArchivoEstado{},
 	); err != nil {
-		logs.LogErrorMigrandoTabla("CGD_ARCHIVO y CGD_ARCHIVO_ESTADO", err)
+		logs.Logger.LogError("Error al migrar las tablas", err, "DB_MIGRATION")
 		return fmt.Errorf("error al migrar las tablas: %w", err)
 	}
-	logs.LogMigracionTablaCompletada("CGD_ARCHIVO y CGD_ARCHIVO_ESTADO")
+
+	logs.Logger.LogInfo("Migración de las tablas completada correctamente", "DB_MIGRATION")
 	return nil
 }
 
@@ -85,12 +87,13 @@ func (dbm *DBManager) GetDB() *gorm.DB {
 func (dbm *DBManager) CloseDB() {
 	sqlDB, err := dbm.DB.DB()
 	if err != nil {
-		logs.LogErrorConexionBaseDatos(err)
+		logs.Logger.LogError("Error al obtener la conexión de base de datos", err, "DB_CLOSE")
 		return
 	}
+
 	if err := sqlDB.Close(); err != nil {
-		logs.LogErrorCerrandoConexionBaseDatos(err)
+		logs.Logger.LogError("Error al cerrar la conexión a la base de datos", err, "DB_CLOSE")
 	} else {
-		logs.LogConexionBaseDatosCerrada()
+		logs.Logger.LogInfo("Conexión a la base de datos cerrada correctamente 🚪", "DB_CLOSE")
 	}
 }
