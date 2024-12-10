@@ -1,20 +1,20 @@
 package logs
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 )
 
 // LogInterface define una interfaz para el logger.
 type LogInterface interface {
 	LogError(message string, err error, fileName string)
-	LogInfo(message string, fileName string)
+	LogInfo(message, fileName string)
 	LogWarn(message string, fileName string, extraArgs ...string)
-	LogDebug(message string, fileName string)
+	LogDebug(message, fileName string)
 }
 
 // LoggerAdapter implementa LogInterface utilizando funciones específicas.
@@ -32,7 +32,7 @@ func (l *LoggerAdapter) LogWarn(message string, fileName string, extraArgs ...st
 	LogWarn(message, fileName, extraArgs...)
 }
 
-func (l *LoggerAdapter) LogDebug(message string, fileName string) {
+func (l *LoggerAdapter) LogDebug(message, fileName string) {
 	LogDebug(message, fileName)
 }
 
@@ -50,75 +50,118 @@ func init() {
 	}
 }
 
-// getCurrentTimestamp obtiene la fecha y hora actual en la zona horaria de Colombia.
+// getCurrentTimestamp obtiene la fecha y hora actual en la zona horaria de Colombia con milisegundos.
 func getCurrentTimestamp() string {
 	location, err := time.LoadLocation("America/Bogota")
 	if err != nil {
 		location = time.UTC
 	}
-	return time.Now().In(location).Format("2006-01-02 15:04:05")
+	return time.Now().In(location).Format("2006-01-02 15:04:05.000")
 }
 
 // runtimeCaller es una variable que facilita las pruebas.
 var runtimeCaller = runtime.Caller
 
 // getCallerInfo obtiene el archivo y la línea desde donde se llamó el logger.
-func getCallerInfo() string {
-	// Incrementamos el nivel a 4 para capturar la llamada desde el código que invoca el log.
+func getCallerInfo() (string, int) {
 	_, file, line, ok := runtimeCaller(4)
 	if !ok {
-		return "???"
+		return "???", 0
 	}
-	relativePath := strings.TrimPrefix(filepath.ToSlash(file), basePath)
-	return fmt.Sprintf("%s:%d", relativePath, line)
+	relativePath := filepath.Base(file)
+	return relativePath, line
 }
 
-// logMessage maneja el formato del log sin colores.
-func logMessage(level string, message, fileName string) {
+// logMessageJSON maneja el formato JSON del log.
+func logMessageJSON(level, message, fileName string) string {
 	timestamp := getCurrentTimestamp()
-	callerInfo := getCallerInfo()
-	if fileName != "" {
-		fmt.Printf(
-			"%s [%s] [%s] [File: %s] %s\n",
-			timestamp,
-			level,
-			callerInfo,
-			fileName,
-			message,
-		)
-	} else {
-		fmt.Printf("%s [%s] [%s] %s\n", timestamp, level, callerInfo, message)
+	moduleName, lineNumber := getCallerInfo()
+
+	logData := struct {
+		Timestamp  string `json:"timestamp"`
+		Level      string `json:"level"`
+		ModuleName string `json:"module_name"`
+		LineNumber int    `json:"line_number"`
+		RequestID  string `json:"request_id"`
+		Message    string `json:"message"`
+	}{
+		Timestamp:  timestamp,
+		Level:      level,
+		ModuleName: moduleName,
+		LineNumber: lineNumber,
+		RequestID:  fileName,
+		Message:    message,
 	}
+
+	jsonLog, err := json.Marshal(logData)
+	if err != nil {
+		return `{"error": "failed to marshal log to JSON"}`
+	}
+	return string(jsonLog)
+}
+
+// logMessagePlain maneja el formato detallado en texto plano.
+func logMessagePlain(level, message, fileName string) string {
+	timestamp := getCurrentTimestamp()
+	moduleName, lineNumber := getCallerInfo()
+	return fmt.Sprintf("%s [%s] [%s:%d] [FileName: %s] %s",
+		timestamp, level, moduleName, lineNumber, fileName, message)
 }
 
 // LogInfo genera logs a nivel INFO.
 func LogInfo(message, fileName string) {
-	logMessage("INFO", message, fileName)
+	format := os.Getenv("LOG_FORMAT")
+	if format == "JSON" {
+		fmt.Println(logMessageJSON("INFO", message, fileName))
+	} else {
+		fmt.Println(logMessagePlain("INFO", message, fileName))
+	}
 }
 
 // LogWarn genera logs a nivel WARNING.
 func LogWarn(message string, fileName string, extraArgs ...string) {
+	var formattedMessage string
 	if len(extraArgs) >= 2 {
 		key := extraArgs[0]
 		value := extraArgs[1]
-		logMessage("WARNING", fmt.Sprintf("%s - %s: %s", message, key, value), fileName)
+		formattedMessage = fmt.Sprintf("%s - %s: %s", message, key, value)
 	} else {
-		logMessage("WARNING", message, fileName)
+		formattedMessage = message
+	}
+
+	format := os.Getenv("LOG_FORMAT")
+	if format == "JSON" {
+		fmt.Println(logMessageJSON("WARNING", formattedMessage, fileName))
+	} else {
+		fmt.Println(logMessagePlain("WARNING", formattedMessage, fileName))
 	}
 }
 
 // LogError genera logs a nivel ERROR.
 func LogError(message string, err error, fileName string) {
+	var formattedMessage string
 	if err != nil {
-		logMessage("ERROR", fmt.Sprintf("%s - Error: %v", message, err), fileName)
+		formattedMessage = fmt.Sprintf("%s - Error: %v", message, err)
 	} else {
-		logMessage("ERROR", message, fileName)
+		formattedMessage = message
+	}
+
+	format := os.Getenv("LOG_FORMAT")
+	if format == "JSON" {
+		fmt.Println(logMessageJSON("ERROR", formattedMessage, fileName))
+	} else {
+		fmt.Println(logMessagePlain("ERROR", formattedMessage, fileName))
 	}
 }
 
 // LogDebug genera logs a nivel DEBUG.
 func LogDebug(message, fileName string) {
 	if logLevel := os.Getenv("LOG_LEVEL"); logLevel == "DEBUG" {
-		logMessage("DEBUG", message, fileName)
+		format := os.Getenv("LOG_FORMAT")
+		if format == "JSON" {
+			fmt.Println(logMessageJSON("DEBUG", message, fileName))
+		} else {
+			fmt.Println(logMessagePlain("DEBUG", message, fileName))
+		}
 	}
 }

@@ -1,202 +1,278 @@
 package logs
 
 import (
-	"bytes"
+	"fmt"
+	"io"
 	"os"
+	"strings"
 	"testing"
 )
 
-// Helper para verificar si una cadena contiene el nivel de log esperado
-func containsLog(output, expected string) bool {
-	return bytes.Contains([]byte(output), []byte(expected))
-}
-
-const (
-	mensajeInfo  = "Este es un mensaje de información"
-	mensajeError = "Se esperaba el nivel %s en la salida, pero no se encontró. Salida: %s"
-)
-
-// Helper para capturar la salida de la consola
 func captureOutput(f func()) string {
-	var buf bytes.Buffer
-	stdout := os.Stdout
+	// Captura la salida estándar
+	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
+	// Ejecuta la función
 	f()
 
-	_ = w.Close()
-	_, _ = buf.ReadFrom(r)
-	os.Stdout = stdout
+	// Restaura la salida estándar
+	w.Close()
+	os.Stdout = old
 
+	// Lee el resultado
+	var buf strings.Builder
+	io.Copy(&buf, r)
 	return buf.String()
 }
 
 func TestLogInfo(t *testing.T) {
+	// Establece la variable de entorno LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	// Ejecuta la función LogInfo
+	message := "Este es un mensaje de información"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		LogInfo(mensajeInfo, "messageID")
+		LogInfo(message, fileName)
 	})
 
-	expected := "INFO"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "INFO"
+	if !strings.Contains(output, `"level":"INFO"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"INFO\" en la salida, pero no se encontró. Salida: %s", output)
+	}
+
+	// Verifica que el mensaje esté presente
+	if !strings.Contains(output, `"message":"`+message+`"`) {
+		t.Errorf("Se esperaba el mensaje \"%s\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
 func TestLogWarn(t *testing.T) {
-	// Test sin parámetros opcionales
+	// Establece la variable de entorno LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	// Ejecuta la función LogWarn
+	message := "Este es un mensaje de advertencia"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		LogWarn("Este es un mensaje de advertencia", "messageID")
+		LogWarn(message, fileName)
 	})
 
-	expected := "WARNING"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "WARNING"
+	if !strings.Contains(output, `"level":"WARNING"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"WARNING\" en la salida, pero no se encontró. Salida: %s", output)
 	}
 
-	// Test con parámetros opcionales
-	output = captureOutput(func() {
-		LogWarn("Este es un mensaje de advertencia", "messageID", "key", "value")
-	})
-
-	expected = "WARNING"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el mensaje esté presente
+	if !strings.Contains(output, `"message":"`+message+`"`) {
+		t.Errorf("Se esperaba el mensaje \"%s\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
 func TestLogError(t *testing.T) {
-	// Test sin error
+	// Establece la variable de entorno LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	// Ejecuta la función LogError con un error
+	message := "Este es un error con detalles"
+	fileName := "logger_test.go"
+	err := fmt.Errorf("file does not exist")
 	output := captureOutput(func() {
-		LogError("Este es un error sin detalles", nil, "messageID")
+		LogError(message, err, fileName)
 	})
 
-	expected := "ERROR"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "ERROR"
+	if !strings.Contains(output, `"level":"ERROR"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"ERROR\" en la salida, pero no se encontró. Salida: %s", output)
 	}
 
-	// Test con error
-	err := captureOutput(func() {
-		LogError("Este es un error con detalles", os.ErrNotExist, "messageID")
-	})
-
-	expectedMessage := "Error: file does not exist"
-	if !containsLog(err, expectedMessage) {
-		t.Errorf(mensajeError, expectedMessage, err)
+	// Verifica que el mensaje de error esté presente
+	if !strings.Contains(output, `"message":"`+message+` - Error: file does not exist"`) {
+		t.Errorf("Se esperaba el mensaje \"%s - Error: file does not exist\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
 func TestLogDebug(t *testing.T) {
-	os.Setenv("LOG_LEVEL", "DEBUG")
-	defer os.Unsetenv("LOG_LEVEL")
+	// Establece la variable de entorno LOG_LEVEL y LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_LEVEL", "DEBUG")
+	t.Setenv("LOG_FORMAT", "JSON")
 
+	// Ejecuta la función LogDebug
+	message := "Este es un mensaje de depuración"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		LogDebug("Este es un mensaje de depuración", "messageID")
+		LogDebug(message, fileName)
 	})
 
-	expected := "DEBUG"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
-	}
-}
-
-func TestLoggerAdapterLogError(t *testing.T) {
-	adapter := &LoggerAdapter{}
-	output := captureOutput(func() {
-		adapter.LogError("Este es un error desde el adaptador", os.ErrNotExist, "messageID")
-	})
-
-	expected := "ERROR"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "DEBUG"
+	if !strings.Contains(output, `"level":"DEBUG"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"DEBUG\" en la salida, pero no se encontró. Salida: %s", output)
 	}
 
-	expectedMessage := "Error: file does not exist"
-	if !containsLog(output, expectedMessage) {
-		t.Errorf(mensajeError, expectedMessage, output)
+	// Verifica que el mensaje esté presente
+	if !strings.Contains(output, `"message":"`+message+`"`) {
+		t.Errorf("Se esperaba el mensaje \"%s\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
 func TestLoggerAdapterLogInfo(t *testing.T) {
-	adapter := &LoggerAdapter{}
+	// Establece la variable de entorno LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	// Ejecuta la función LogInfo usando el adaptador
+	message := "Este es un mensaje de información desde el adaptador"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		adapter.LogInfo("Este es un mensaje de información desde el adaptador", "messageID")
+		Logger.LogInfo(message, fileName)
 	})
 
-	expected := "INFO"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "INFO"
+	if !strings.Contains(output, `"level":"INFO"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"INFO\" en la salida, pero no se encontró. Salida: %s", output)
+	}
+
+	// Verifica que el mensaje esté presente
+	if !strings.Contains(output, `"message":"`+message+`"`) {
+		t.Errorf("Se esperaba el mensaje \"%s\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
 func TestLoggerAdapterLogWarn(t *testing.T) {
-	adapter := &LoggerAdapter{}
+	// Establece la variable de entorno LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	// Ejecuta la función LogWarn usando el adaptador
+	message := "Este es un mensaje de advertencia desde el adaptador"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		adapter.LogWarn("Este es un mensaje de advertencia desde el adaptador", "messageID")
+		Logger.LogWarn(message, fileName)
 	})
 
-	expected := "WARNING"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "WARNING"
+	if !strings.Contains(output, `"level":"WARNING"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"WARNING\" en la salida, pero no se encontró. Salida: %s", output)
+	}
+
+	// Verifica que el mensaje esté presente
+	if !strings.Contains(output, `"message":"`+message+`"`) {
+		t.Errorf("Se esperaba el mensaje \"%s\" en la salida, pero no se encontró. Salida: %s", message, output)
+	}
+}
+
+func TestLoggerAdapterLogError(t *testing.T) {
+	// Establece la variable de entorno LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	// Ejecuta la función LogError usando el adaptador con un error
+	message := "Este es un error desde el adaptador"
+	fileName := "logger_test.go"
+	err := fmt.Errorf("file does not exist")
+	output := captureOutput(func() {
+		Logger.LogError(message, err, fileName)
+	})
+
+	// Verifica que el nivel en el JSON sea "ERROR"
+	if !strings.Contains(output, `"level":"ERROR"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"ERROR\" en la salida, pero no se encontró. Salida: %s", output)
+	}
+
+	// Verifica que el mensaje de error esté presente
+	if !strings.Contains(output, `"message":"`+message+` - Error: file does not exist"`) {
+		t.Errorf("Se esperaba el mensaje \"%s - Error: file does not exist\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
 func TestLoggerAdapterLogDebug(t *testing.T) {
-	adapter := &LoggerAdapter{}
-	os.Setenv("LOG_LEVEL", "DEBUG")
-	defer os.Unsetenv("LOG_LEVEL")
+	// Establece la variable de entorno LOG_LEVEL y LOG_FORMAT para activar el formato JSON
+	t.Setenv("LOG_LEVEL", "DEBUG")
+	t.Setenv("LOG_FORMAT", "JSON")
 
+	// Ejecuta la función LogDebug usando el adaptador
+	message := "Este es un mensaje de depuración desde el adaptador"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		adapter.LogDebug("Este es un mensaje de depuración desde el adaptador", "messageID")
+		Logger.LogDebug(message, fileName)
 	})
 
-	expected := "DEBUG"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el nivel en el JSON sea "DEBUG"
+	if !strings.Contains(output, `"level":"DEBUG"`) {
+		t.Errorf("Se esperaba el nivel \"level\":\"DEBUG\" en la salida, pero no se encontró. Salida: %s", output)
+	}
+
+	// Verifica que el mensaje esté presente
+	if !strings.Contains(output, `"message":"`+message+`"`) {
+		t.Errorf("Se esperaba el mensaje \"%s\" en la salida, pero no se encontró. Salida: %s", message, output)
 	}
 }
 
-func TestLogMessageWithoutMessageID(t *testing.T) {
+func TestLogInfoStringFormat(t *testing.T) {
+	t.Setenv("LOG_FORMAT", "STRING")
+
+	message := "Mensaje de información en formato STRING"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		logMessage("INFO", mensajeInfo, "")
+		LogInfo(message, fileName)
 	})
 
-	expected := "INFO"
-	if !containsLog(output, expected) {
-		t.Errorf(mensajeError, expected, output)
+	// Verifica que el mensaje se registre como STRING
+	if !strings.Contains(output, "[INFO]") {
+		t.Errorf("Se esperaba que el mensaje incluyera [INFO], pero no se encontró. Salida: %s", output)
 	}
-	expectedMessage := "Este es un mensaje de información"
-	if !containsLog(output, expectedMessage) {
-		t.Errorf(mensajeError, expectedMessage, output)
+	if !strings.Contains(output, message) {
+		t.Errorf("Se esperaba el mensaje \"%s\", pero no se encontró. Salida: %s", message, output)
+	}
+	if !strings.Contains(output, fileName) {
+		t.Errorf("Se esperaba que el nombre del archivo \"%s\" estuviera en la salida, pero no se encontró. Salida: %s", fileName, output)
 	}
 }
 
-func TestLogMessageWithMessageID(t *testing.T) {
+func TestLogDebugIgnored(t *testing.T) {
+	t.Setenv("LOG_LEVEL", "INFO")
+	t.Setenv("LOG_FORMAT", "STRING")
+
+	message := "Mensaje de depuración que debe ser ignorado"
+	fileName := "logger_test.go"
 	output := captureOutput(func() {
-		logMessage("INFO", mensajeInfo, "messageID")
+		LogDebug(message, fileName)
 	})
 
-	expected := "[File: messageID]"
-	if !containsLog(output, expected) {
-		t.Errorf(
-			"Se esperaba que el identificador 'messageID' "+
-				"apareciera como [File: messageID], pero no se encontró. Salida: %s",
-			output,
-		)
+	// Verifica que no se registre el mensaje
+	if output != "" {
+		t.Errorf("Se esperaba que el mensaje no se registrara, pero se encontró. Salida: %s", output)
 	}
 }
 
-func TestGetCallerInfoFailure(t *testing.T) {
-	originalCaller := runtimeCaller
-	runtimeCaller = func(skip int) (
-		pc uintptr, file string, line int, ok bool) {
-		return 0, "", 0, false
-	}
-	defer func() { runtimeCaller = originalCaller }()
+func TestUnknownLogFormat(t *testing.T) {
+	t.Setenv("LOG_FORMAT", "UNKNOWN")
 
-	callerInfo := getCallerInfo()
-	if callerInfo != "???" {
-		t.Errorf("Se esperaba que callerInfo fuera '???', pero fue: %s", callerInfo)
+	message := "Mensaje con formato desconocido"
+	fileName := "logger_test.go"
+	output := captureOutput(func() {
+		LogInfo(message, fileName)
+	})
+
+	// Verifica que el logger maneje el caso correctamente (puede ser en formato STRING por defecto)
+	if !strings.Contains(output, "[INFO]") {
+		t.Errorf("Se esperaba que el mensaje se registrara en formato STRING como fallback. Salida: %s", output)
+	}
+	if !strings.Contains(output, message) {
+		t.Errorf("Se esperaba el mensaje \"%s\", pero no se encontró. Salida: %s", message, output)
+	}
+}
+
+func TestLogErrorWithoutDetails(t *testing.T) {
+	t.Setenv("LOG_FORMAT", "JSON")
+
+	message := "Error sin detalles adicionales"
+	fileName := "logger_test.go"
+	output := captureOutput(func() {
+		LogError(message, nil, fileName)
+	})
+
+	// Verifica que no incluya el campo de error en el JSON
+	if strings.Contains(output, "Error:") {
+		t.Errorf("No se esperaba incluir detalles de error, pero se encontraron. Salida: %s", output)
 	}
 }
