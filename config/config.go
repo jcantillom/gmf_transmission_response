@@ -19,7 +19,10 @@ func NewConfigManager() *Manager {
 func (cm *Manager) InitConfig() {
 	// Cargar el archivo .env si existe
 	if err := godotenv.Load(); err != nil {
-		logs.Logger.LogWarn("Archivo .env no encontrado, usando solo variables de entorno", "CONFIG_INIT")
+		logs.Logger.LogWarn(
+			"Archivo .env no encontrado, usando solo variables de entorno",
+			"CONFIG_INIT",
+		)
 	}
 
 	// Configurar Viper para usar el prefijo "APP" y cargar variables automáticamente del entorno
@@ -32,7 +35,10 @@ func (cm *Manager) InitConfig() {
 
 	// Leer las configuraciones del archivo .env
 	if err := viper.ReadInConfig(); err != nil {
-		logs.Logger.LogWarn("Error al leer el archivo de configuración", "CONFIG_INIT", err.Error())
+		logs.Logger.LogWarn(
+			"Error al leer el archivo de configuración",
+			"CONFIG_INIT", err.Error(),
+		)
 	}
 
 	// Lista de variables de entorno obligatorias

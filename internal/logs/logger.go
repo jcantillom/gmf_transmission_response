@@ -79,7 +79,7 @@ func logMessage(level string, message, fileName string) {
 	callerInfo := getCallerInfo()
 	if fileName != "" {
 		fmt.Printf(
-			"%s [%s] [%s] [FileName: %s] %s\n",
+			"%s [%s] [%s] [File: %s] %s\n",
 			timestamp,
 			level,
 			callerInfo,

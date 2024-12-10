@@ -19,15 +19,15 @@ const (
 // Helper para capturar la salida de la consola
 func captureOutput(f func()) string {
 	var buf bytes.Buffer
-	stdout := os.Stdout  // Guardamos el stdout actual
-	r, w, _ := os.Pipe() // Creamos una pipe para capturar la salida
-	os.Stdout = w        // Redirigimos stdout a la pipe
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-	f() // Ejecutamos la función que queremos capturar
+	f()
 
-	_ = w.Close()          // Cerramos la pipe para evitar fugas
-	_, _ = buf.ReadFrom(r) // Leemos la salida capturada en el buffer
-	os.Stdout = stdout     // Restauramos stdout a su valor original
+	_ = w.Close()
+	_, _ = buf.ReadFrom(r)
+	os.Stdout = stdout
 
 	return buf.String()
 }
@@ -177,22 +177,23 @@ func TestLogMessageWithMessageID(t *testing.T) {
 		logMessage("INFO", mensajeInfo, "messageID")
 	})
 
-	expected := "[MessageId: messageID]"
+	expected := "[File: messageID]"
 	if !containsLog(output, expected) {
 		t.Errorf(
-			"Se esperaba el MessageId 'messageID' en la salida, pero no se encontró. Salida: %s",
+			"Se esperaba que el identificador 'messageID' "+
+				"apareciera como [File: messageID], pero no se encontró. Salida: %s",
 			output,
 		)
 	}
 }
 
 func TestGetCallerInfoFailure(t *testing.T) {
-	// Simula el fallo de runtime.Caller
 	originalCaller := runtimeCaller
-	runtimeCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
+	runtimeCaller = func(skip int) (
+		pc uintptr, file string, line int, ok bool) {
 		return 0, "", 0, false
 	}
-	defer func() { runtimeCaller = originalCaller }() // Restaurar la función original.
+	defer func() { runtimeCaller = originalCaller }()
 
 	callerInfo := getCallerInfo()
 	if callerInfo != "???" {

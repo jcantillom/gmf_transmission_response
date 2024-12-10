@@ -77,10 +77,10 @@ func TestHandleTransmisionResponses_Success(t *testing.T) {
 	var resp models.Response
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.NoError(t, err)
-	assert.True(t, resp.Success)                                                          // Debe ser exitoso
-	assert.Equal(t, 1, resp.TotalFiles)                                                   // Debe haber 1 archivo
-	assert.Equal(t, 0, resp.ErrorCount)                                                   // No debe haber errores
-	assert.Equal(t, "Todos los archivos fueron procesados correctamente ✅", resp.Message) // Mensaje esperado
+	assert.True(t, resp.Success)
+	assert.Equal(t, 1, resp.TotalFiles)
+	assert.Equal(t, 0, resp.ErrorCount)
+	assert.Equal(t, "Todos los archivos fueron procesados correctamente", resp.Message)
 }
 
 func TestHandleTransmisionResponses_PartialFailure(t *testing.T) {

@@ -37,7 +37,7 @@ func TestProcesarTransmision_Success(t *testing.T) {
 	archivoService := service.NewArchivoService(mockRepo)
 
 	transmittedFile := models.TransmittedFile{
-		FileName: "TUTGMF0001000120240312-0001.txt",
+		FileName: "TUTGMF0001000120240312-0001",
 		TransmissionResult: models.TransmissionResult{
 			Status: "SUCCESSFUL",
 			Code:   "0000",
@@ -69,7 +69,7 @@ func TestProcesarTransmision_Failure(t *testing.T) {
 	archivoService := service.NewArchivoService(mockRepo)
 
 	transmittedFile := models.TransmittedFile{
-		FileName: "TUTGMF0001000120240312-0001.txt",
+		FileName: "TUTGMF0001000120240312-0001",
 		TransmissionResult: models.TransmissionResult{
 			Status: "ERROR",
 			Code:   "0001",
@@ -101,7 +101,7 @@ func TestProcesarTransmision_ArchivoNoEncontrado(t *testing.T) {
 	archivoService := service.NewArchivoService(mockRepo)
 
 	transmittedFile := models.TransmittedFile{
-		FileName: "TUTGMF0001000120240312-0001.txt",
+		FileName: "TUTGMF0001000120240312-0001",
 		TransmissionResult: models.TransmissionResult{
 			Status: "ERROR",
 			Code:   "0001",
