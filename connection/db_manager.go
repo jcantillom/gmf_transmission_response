@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"gmf_transmission_response/internal/aws"
 	"gmf_transmission_response/internal/logs"
 	"gmf_transmission_response/internal/models"
 	"gorm.io/driver/postgres"
@@ -32,13 +33,27 @@ func NewDBManager() *DBManager {
 
 // InitDB inicializa la conexión a la base de datos y realiza migraciones.
 func (dbm *DBManager) InitDB() error {
+	// Obtener credenciales desde AWS Secrets Manager
+	secretsManager, err := aws.NewSecretsManager()
+	if err != nil {
+		logs.Logger.LogError("Error al inicializar SecretsManager", err, "AWS_INIT")
+		return fmt.Errorf("error inicializando SecretsManager: %w", err)
+	}
+
+	secretName := os.Getenv("SECRETS_DB")
+	secret, err := secretsManager.GetSecret(secretName)
+	if err != nil {
+		logs.Logger.LogError("Error al obtener el secreto", err, "AWS_SECRETS")
+		return fmt.Errorf("error obteniendo el secreto: %w", err)
+	}
+
 	// Construir el Data Source Name (DSN)
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
+		secret["USERNAME"],
+		secret["PASSWORD"],
 		os.Getenv("DB_NAME"),
 	)
 
@@ -54,7 +69,6 @@ func (dbm *DBManager) InitDB() error {
 	)
 
 	// Abrir la conexión a la base de datos usando GORM
-	var err error
 	dbm.DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: newLogger,
 	})

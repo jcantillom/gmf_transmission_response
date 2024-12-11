@@ -44,9 +44,8 @@ type CGDArchivo struct {
 	DetalleError                string    `json:"detalle_error" gorm:"type:varchar(2000)"`
 }
 
-// TableName devuelve el nombre de la tabla para el modelo CGDArchivo.
 func (CGDArchivo) TableName() string {
-	return "CGD_ARCHIVO"
+	return "cgd_archivos"
 }
 
 // CGDArchivoEstado representa la estructura de la tabla CGD_ARCHIVO_ESTADO.
@@ -57,7 +56,6 @@ type CGDArchivoEstado struct {
 	FechaCambioEstado time.Time `json:"fecha_cambio_estado" gorm:"type:timestamp;primaryKey;not null;autoCreateTime(6)"`
 }
 
-// TableName devuelve el nombre de la tabla para el modelo CGDArchivoEstado.
 func (CGDArchivoEstado) TableName() string {
-	return "CGD_ARCHIVO_ESTADO"
+	return "cgd_archivo_estados"
 }

@@ -2,20 +2,20 @@ package models
 
 // TransmisionResponse representa la estructura de una respuesta de transmisión
 type TransmisionResponse struct {
-	TransmittedFiles []TransmittedFile `json:"transmittedFiles"` // Array de archivos transmitidos
+	TransmittedFiles []TransmittedFile `json:"transmittedFiles"`
 }
 
 // TransmittedFile representa un archivo transmitido y su resultado.
 type TransmittedFile struct {
-	FileName           string             `json:"fileName"`           // Nombre del archivo transmitido
-	TransmissionResult TransmissionResult `json:"transmissionResult"` // Contenedor de resultado de la transmisión
+	FileName           string             `json:"fileName"`
+	TransmissionResult TransmissionResult `json:"transmissionResult"`
 }
 
 // TransmissionResult contiene el resultado de la transmisión.
 type TransmissionResult struct {
-	Status string `json:"status"` // Estado de la transmisión: ERROR o SUCCESSFUL
-	Code   string `json:"code"`   // Código de error de longitud 4
-	Detail string `json:"detail"` // Detalle del resultado de la transmisión
+	Status string `json:"status"`
+	Code   string `json:"code"`
+	Detail string `json:"detail"`
 }
 
 // Response estructura las respuestas del handler.
