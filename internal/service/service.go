@@ -51,7 +51,7 @@ func (s *ArchivoService) ProcesarTransmision(transmittedFile models.TransmittedF
 		return err
 	}
 
-	estadoArchivo := &models.CGDArchivoEstado{
+	estadoArchivo := &models.CGDArchivoEstados{
 		IDArchivo:         archivo.IDArchivo,
 		EstadoInicial:     archivo.GAWRtaTransEstado,
 		EstadoFinal:       transmittedFile.TransmissionResult.Status,
@@ -69,7 +69,7 @@ func (s *ArchivoService) ProcesarTransmision(transmittedFile models.TransmittedF
 
 // actualizarEstadoArchivo actualiza el estado del archivo dependiendo si es anulación o movimiento.
 func (s *ArchivoService) actualizarEstadoArchivo(
-	archivo *models.CGDArchivo, transmittedFile models.TransmittedFile, isAnulacion bool) error {
+	archivo *models.CGDArchivos, transmittedFile models.TransmittedFile, isAnulacion bool) error {
 	// Actualizar el estado en función del resultado de la transmisión
 	archivo.GAWRtaTransEstado = transmittedFile.TransmissionResult.Status
 	archivo.GAWRtaTransCodigo = transmittedFile.TransmissionResult.Code

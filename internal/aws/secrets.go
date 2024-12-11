@@ -13,14 +13,18 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
 
-// SecretsManagerInterface define los métodos para interactuar con AWS Secrets Manager.
-type SecretsManagerInterface interface {
-	GetSecret(secretName string) (map[string]string, error)
+// SecretsManagerClient define los métodos que el cliente de Secrets Manager debe implementar.
+type SecretsManagerClient interface {
+	GetSecretValue(
+		ctx context.Context,
+		params *secretsmanager.GetSecretValueInput,
+		optFns ...func(*secretsmanager.Options),
+	) (*secretsmanager.GetSecretValueOutput, error)
 }
 
 // SecretsManager implementa SecretsManagerInterface.
 type SecretsManager struct {
-	client *secretsmanager.Client
+	Client SecretsManagerClient
 }
 
 // NewSecretsManager crea una nueva instancia de SecretsManager.
@@ -51,7 +55,7 @@ func NewSecretsManager() (*SecretsManager, error) {
 	}
 
 	client := secretsmanager.NewFromConfig(cfg)
-	return &SecretsManager{client: client}, nil
+	return &SecretsManager{Client: client}, nil
 }
 
 // GetSecret obtiene y deserializa un secreto desde AWS Secrets Manager o LocalStack.
@@ -60,7 +64,7 @@ func (sm *SecretsManager) GetSecret(secretName string) (map[string]string, error
 		SecretId: &secretName,
 	}
 
-	result, err := sm.client.GetSecretValue(context.TODO(), input)
+	result, err := sm.Client.GetSecretValue(context.TODO(), input)
 	if err != nil {
 		var notFoundErr *types.ResourceNotFoundException
 		if errors.As(err, &notFoundErr) {

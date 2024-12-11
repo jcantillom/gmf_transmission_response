@@ -8,7 +8,6 @@ import (
 
 	"gmf_transmission_response/internal/aws"
 	"gmf_transmission_response/internal/logs"
-	"gmf_transmission_response/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -79,16 +78,6 @@ func (dbm *DBManager) InitDB() error {
 
 	logs.Logger.LogInfo("Conexión a la base de datos establecida correctamente 🐘", "DB_CONNECTION")
 
-	// Migrar las tablas
-	if err := dbm.DB.AutoMigrate(
-		&models.CGDArchivo{},
-		&models.CGDArchivoEstado{},
-	); err != nil {
-		logs.Logger.LogError("Error al migrar las tablas", err, "DB_MIGRATION")
-		return fmt.Errorf("error al migrar las tablas: %w", err)
-	}
-
-	logs.Logger.LogInfo("Migración de las tablas completada correctamente", "DB_MIGRATION")
 	return nil
 }
 

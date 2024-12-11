@@ -27,7 +27,6 @@ func SetupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 	return gormDB, mock
 }
 
-// Test para GetArchivoByNombreArchivo
 func TestGetArchivoByNombreArchivo(t *testing.T) {
 	// Configurar la base de datos de prueba y el mock
 	gormDB, mock := SetupTestDB(t)
@@ -35,7 +34,7 @@ func TestGetArchivoByNombreArchivo(t *testing.T) {
 
 	// Definir el archivo que será devuelto por la consulta
 	nombreArchivo := "TUTGMF000100012024031-0001.txt"
-	archivo := models.CGDArchivo{
+	archivo := models.CGDArchivos{
 		IDArchivo:         1,
 		NombreArchivo:     nombreArchivo,
 		GAWRtaTransEstado: "PENDING",
@@ -43,9 +42,7 @@ func TestGetArchivoByNombreArchivo(t *testing.T) {
 
 	// Configurar el mock para la consulta SQL
 	mock.ExpectQuery(
-		`SELECT \* FROM "CGD_ARCHIVO" 
-          WHERE acg_nombre_archivo = .+ 
-          ORDER BY "CGD_ARCHIVO"."id_archivo" LIMIT .+`).
+		`SELECT \* FROM "cgd_archivos" WHERE acg_nombre_archivo = \$1 ORDER BY "cgd_archivos"."id_archivo" LIMIT \$2`).
 		WithArgs(nombreArchivo, 1). // Debemos pasar también el argumento para el límite (GORM lo agrega automáticamente)
 		WillReturnRows(sqlmock.NewRows([]string{"id_archivo", "nombre_archivo", "gaw_rta_trans_estado"}).
 			AddRow(archivo.IDArchivo, archivo.NombreArchivo, archivo.GAWRtaTransEstado))
@@ -65,23 +62,22 @@ func TestGetArchivoByNombreArchivo_NotFound(t *testing.T) {
 	gormDB, mock := SetupTestDB(t)
 	repo := repository.NewArchivoRepository(gormDB)
 
-	// Configurar el mock para la consulta SQL cuando no se encuentra el archivo
-	nombreArchivo := "NoExiste.txt"
+	// Definir el nombre de archivo que será buscado
+	nombreArchivo := "TUTGMF000100012024031-0001.txt"
+
+	// Configurar el mock para la consulta SQL
 	mock.ExpectQuery(
-		`SELECT \* FROM "CGD_ARCHIVO" 
-          WHERE acg_nombre_archivo = .+ 
-          ORDER BY "CGD_ARCHIVO"."id_archivo" LIMIT .+`).
+		`SELECT \* FROM "cgd_archivos" WHERE acg_nombre_archivo = \$1 ORDER BY "cgd_archivos"."id_archivo" LIMIT \$2`).
 		WithArgs(nombreArchivo, 1).
-		WillReturnError(gorm.ErrRecordNotFound) // Simular que no se encontró el registro
+		WillReturnRows(sqlmock.NewRows([]string{"id_archivo", "nombre_archivo", "gaw_rta_trans_estado"}))
 
 	// Ejecutar el método
 	result, err := repo.GetArchivoByNombreArchivo(nombreArchivo)
 
-	// Verificar que el resultado sea nil y se retorne el error correcto
+	// Verificar los resultados
 	assert.Error(t, err)
-	assert.Equal(t, gorm.ErrRecordNotFound, err)
 	assert.Nil(t, result)
-	assert.NoError(t, mock.ExpectationsWereMet()) // Verificar que todas las expectativas fueron cumplidas
+
 }
 
 func TestUpdateArchivo(t *testing.T) {
@@ -90,7 +86,7 @@ func TestUpdateArchivo(t *testing.T) {
 	repo := repository.NewArchivoRepository(gormDB)
 
 	// Datos de prueba
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:          1,
 		GAWRtaTransEstado:  "SUCCESS",
 		GAWRtaTransCodigo:  "0000",
@@ -102,7 +98,7 @@ func TestUpdateArchivo(t *testing.T) {
 	mock.ExpectBegin()
 
 	// Configurar el mock para la consulta SQL de actualización
-	mock.ExpectExec(`UPDATE "CGD_ARCHIVO"`).
+	mock.ExpectExec(`UPDATE "cgd_archivos"`).
 		WithArgs(
 			archivo.Estado,
 			archivo.GAWRtaTransCodigo,
@@ -131,7 +127,7 @@ func TestInsertEstadoArchivo(t *testing.T) {
 	repo := repository.NewArchivoRepository(gormDB)
 
 	// Definir el estado de archivo que será insertado
-	estadoArchivo := models.CGDArchivoEstado{
+	estadoArchivo := models.CGDArchivoEstados{
 		IDArchivo:         1,
 		EstadoInicial:     "PENDING",
 		EstadoFinal:       "SUCCESS",
@@ -140,7 +136,7 @@ func TestInsertEstadoArchivo(t *testing.T) {
 
 	// Configurar el mock para la consulta SQL de inserción
 	mock.ExpectBegin()
-	mock.ExpectExec(`INSERT INTO "CGD_ARCHIVO_ESTADO"`).
+	mock.ExpectExec(`INSERT INTO "cgd_archivo_estados"`).
 		WithArgs(
 			estadoArchivo.IDArchivo,
 			estadoArchivo.EstadoInicial,

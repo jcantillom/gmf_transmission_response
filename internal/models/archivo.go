@@ -2,8 +2,8 @@ package models
 
 import "time"
 
-// CGDArchivo representa la estructura de la tabla CGD_ARCHIVO.
-type CGDArchivo struct {
+// CGDArchivos representa la estructura de la tabla CGD_ARCHIVO.
+type CGDArchivos struct {
 	IDArchivo                   int64     `json:"id_archivo" gorm:"type:numeric(16);primaryKey"`
 	NombreArchivo               string    `json:"nombre_archivo" gorm:"type:varchar(100);not null"`
 	PlataformaOrigen            string    `json:"plataforma_origen" gorm:"type:char(2);not null"`
@@ -44,18 +44,18 @@ type CGDArchivo struct {
 	DetalleError                string    `json:"detalle_error" gorm:"type:varchar(2000)"`
 }
 
-func (CGDArchivo) TableName() string {
+func (CGDArchivos) TableName() string {
 	return "cgd_archivos"
 }
 
-// CGDArchivoEstado representa la estructura de la tabla CGD_ARCHIVO_ESTADO.
-type CGDArchivoEstado struct {
+// CGDArchivoEstados representa la estructura de la tabla CGD_ARCHIVO_ESTADO.
+type CGDArchivoEstados struct {
 	IDArchivo         int64     `json:"id_archivo" gorm:"type:numeric(16);primaryKey;foreignKey:IDArchivo"`
 	EstadoInicial     string    `json:"estado_inicial" gorm:"type:varchar(50)"`
 	EstadoFinal       string    `json:"estado_final" gorm:"type:varchar(50);primaryKey"`
 	FechaCambioEstado time.Time `json:"fecha_cambio_estado" gorm:"type:timestamp;primaryKey;not null;autoCreateTime(6)"`
 }
 
-func (CGDArchivoEstado) TableName() string {
+func (CGDArchivoEstados) TableName() string {
 	return "cgd_archivo_estados"
 }

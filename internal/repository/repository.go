@@ -7,9 +7,9 @@ import (
 
 // RepositoryInterface methods de la interfaz GormArchivoRepository
 type RepositoryInterface interface {
-	GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivo, error)
-	UpdateArchivo(archivo *models.CGDArchivo) error
-	InsertEstadoArchivo(estado *models.CGDArchivoEstado) error
+	GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivos, error)
+	UpdateArchivo(archivo *models.CGDArchivos) error
+	InsertEstadoArchivo(estado *models.CGDArchivoEstados) error
 }
 
 // GormArchivoRepository implementa el repositorio de Archivo utilizando GORM.
@@ -25,8 +25,8 @@ func NewArchivoRepository(db *gorm.DB) *GormArchivoRepository {
 }
 
 // GetArchivoByNombreArchivo obtiene un archivo por su nombre de archivo (ACGNombreArchivo).
-func (r *GormArchivoRepository) GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivo, error) {
-	var archivo models.CGDArchivo
+func (r *GormArchivoRepository) GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivos, error) {
+	var archivo models.CGDArchivos
 	if err := r.DB.Where(
 		"acg_nombre_archivo = ?", nombreArchivo).First(&archivo).Error; err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (r *GormArchivoRepository) GetArchivoByNombreArchivo(nombreArchivo string) 
 }
 
 // UpdateArchivo actualiza el archivo en la base de datos con el nuevo estado de la transmisión.
-func (r *GormArchivoRepository) UpdateArchivo(archivo *models.CGDArchivo) error {
+func (r *GormArchivoRepository) UpdateArchivo(archivo *models.CGDArchivos) error {
 	return r.DB.Model(&archivo).Updates(map[string]interface{}{
 		"gaw_rta_trans_estado":  archivo.GAWRtaTransEstado,
 		"gaw_rta_trans_codigo":  archivo.GAWRtaTransCodigo,
@@ -45,6 +45,6 @@ func (r *GormArchivoRepository) UpdateArchivo(archivo *models.CGDArchivo) error 
 }
 
 // InsertEstadoArchivo inserta un nuevo estado en la tabla CGD_ARCHIVO_ESTADO.
-func (r *GormArchivoRepository) InsertEstadoArchivo(estado *models.CGDArchivoEstado) error {
+func (r *GormArchivoRepository) InsertEstadoArchivo(estado *models.CGDArchivoEstados) error {
 	return r.DB.Create(estado).Error
 }

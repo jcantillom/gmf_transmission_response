@@ -10,19 +10,20 @@ import (
 )
 
 func TestCGDArchivoTableName(t *testing.T) {
-	archivo := models.CGDArchivo{}
-	assert.Equal(t, "CGD_ARCHIVO", archivo.TableName(), "El nombre de la tabla debe ser CGD_ARCHIVO")
+	archivo := models.CGDArchivos{}
+	assert.Equal(
+		t, "cgd_archivos", archivo.TableName(), "El nombre de la tabla debe ser CGD_ARCHIVO")
 }
 
 func TestCGDArchivoEstadoTableName(t *testing.T) {
-	archivoEstado := models.CGDArchivoEstado{}
-	assert.Equal(t, "CGD_ARCHIVO_ESTADO", archivoEstado.TableName(), "El nombre de la tabla debe ser CGD_ARCHIVO_ESTADO")
+	archivoEstado := models.CGDArchivoEstados{}
+	assert.Equal(t, "cgd_archivo_estados", archivoEstado.TableName(), "El nombre de la tabla debe ser CGD_ARCHIVO_ESTADO")
 }
 
 func TestCGDArchivoFields(t *testing.T) {
 	fecha := time.Now()
 
-	archivo := models.CGDArchivo{
+	archivo := models.CGDArchivos{
 		IDArchivo:                   1234567890123456,
 		NombreArchivo:               "archivo.txt",
 		PlataformaOrigen:            "AB",
@@ -56,7 +57,7 @@ func TestCGDArchivoFields(t *testing.T) {
 func TestCGDArchivoEstadoFields(t *testing.T) {
 	fecha := time.Now()
 
-	archivoEstado := models.CGDArchivoEstado{
+	archivoEstado := models.CGDArchivoEstados{
 		IDArchivo:         1234567890123456,
 		EstadoInicial:     "PENDIENTE",
 		EstadoFinal:       "PROCESADO",

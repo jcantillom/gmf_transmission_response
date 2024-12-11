@@ -15,19 +15,19 @@ type MockRepository struct {
 	mock.Mock
 }
 
-func (m *MockRepository) GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivo, error) {
+func (m *MockRepository) GetArchivoByNombreArchivo(nombreArchivo string) (*models.CGDArchivos, error) {
 	args := m.Called(nombreArchivo)
-	if archivo, ok := args.Get(0).(*models.CGDArchivo); ok {
+	if archivo, ok := args.Get(0).(*models.CGDArchivos); ok {
 		return archivo, args.Error(1)
 	}
 	return nil, args.Error(1)
 }
 
-func (m *MockRepository) UpdateArchivo(archivo *models.CGDArchivo) error {
+func (m *MockRepository) UpdateArchivo(archivo *models.CGDArchivos) error {
 	return m.Called(archivo).Error(0)
 }
 
-func (m *MockRepository) InsertEstadoArchivo(estado *models.CGDArchivoEstado) error {
+func (m *MockRepository) InsertEstadoArchivo(estado *models.CGDArchivoEstados) error {
 	return m.Called(estado).Error(0)
 }
 
@@ -45,7 +45,7 @@ func TestProcesarTransmision_Success(t *testing.T) {
 		},
 	}
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001,
 		GAWRtaTransEstado: "PENDING",
 	}
@@ -77,7 +77,7 @@ func TestProcesarTransmision_Failure(t *testing.T) {
 		},
 	}
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001,
 		GAWRtaTransEstado: "PENDING",
 	}
@@ -125,7 +125,7 @@ func TestProcesarTransmision_ValidacionID(t *testing.T) {
 	mockRepo := new(MockRepository)
 	archivoService := service.NewArchivoService(mockRepo)
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001, // Un ID válido para `int64`
 		GAWRtaTransEstado: "PENDING",
 	}
@@ -148,7 +148,7 @@ func TestProcesarTransmision_Anulacion(t *testing.T) {
 	mockRepo := new(MockRepository)
 	archivoService := service.NewArchivoService(mockRepo)
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001,
 		GAWRtaTransEstado: "PENDING",
 	}
@@ -178,7 +178,7 @@ func TestProcesarTransmision_ErrorAlInsertarEstado(t *testing.T) {
 	mockRepo := new(MockRepository)
 	archivoService := service.NewArchivoService(mockRepo)
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001,
 		GAWRtaTransEstado: "PENDING",
 	}
@@ -207,7 +207,7 @@ func TestProcesarTransmision_AnulacionFallida(t *testing.T) {
 	mockRepo := new(MockRepository)
 	archivoService := service.NewArchivoService(mockRepo)
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001,
 		GAWRtaTransEstado: "PENDING",
 	}
@@ -236,7 +236,7 @@ func TestProcesarTransmision_ErrorAlActualizarArchivo(t *testing.T) {
 	mockRepo := new(MockRepository)
 	archivoService := service.NewArchivoService(mockRepo)
 
-	archivo := &models.CGDArchivo{
+	archivo := &models.CGDArchivos{
 		IDArchivo:         10001202403120001,
 		GAWRtaTransEstado: "PENDING",
 	}
